@@ -1,5 +1,3 @@
-## 知识点
-
 ### 1、对象创建过程
 
 `__new__`： 对象的创建，是一个类方法，第一个参数是cls，返回一个实例对象，此时该对象还不具有实例属性，但已经有类属性了。
@@ -312,21 +310,59 @@ if __name__ == '__main__':
 
 
 
-### 5、类属性和实例属性
+### 5、类成员和实例成员
 
-``` python
-'''
+**类属性核实例属性**
+
 理解类属性:
-    - 类属性就相当于全局变量，是类和其实例对象共有的属性；而实例属性为实例对象自己私有，通过类是无法直接调用的。
-    - 类属性就是类对象(class)所拥有的属性，它被所有类对象的实例对象(实例方法)所共有，在内存中只存在一个副本，这个和C++中类的静态成员变量有点类似。
-    - 对于公有的类属性，在类外可以通过类对象和实例对象访问。
-    
+   - 类属性就相当于全局变量，是类和其实例对象共有的属性；而实例属性为实例对象自己私有，通过类是无法直接调用的。
+   - 类属性就是类对象(class)所拥有的属性，它被所有类对象的实例对象(实例方法)所共有，在内存中只存在一个副本，这个和C++中类的静态成员变量有点类似。
+   - 对于公有的类属性，在类外可以通过类对象和实例对象访问。
+
+
+
 调用类属性:
-    - 如果需要在类外修改类属性，必须通过类名去引用然后进行修改；
-    - 如果通过实例调用该属性时，每次调用都到其所属的类中获取该属性，再多次获取的过程中，如果该属性值被修改，那么实例获取到的值也随之变化；
-    - 如果通过实例设置类属性的值，那么实例中会产生一个同名的实例属性，这种方式修改的是实例属性，不会影响到类属性，
-      并且之后如果通过实例对象去引用该名称的属性，同名的实例属性会强制屏蔽掉类属性，即引用的是实例属性，除非删除了该实例属性。
-'''
+   - 如果需要在类外修改类属性，必须通过类名去引用然后进行修改；
+   - 如果通过实例调用该属性时，每次调用都到其所属的类中获取该属性，再多次获取的过程中，如果该属性值被修改，那么实例获取到的值也随之变化；
+   - 如果通过实例设置类属性的值，那么实例中会产生一个同名的实例属性，这种方式修改的是实例属性，不会影响到类属性，并且之后如果通过实例对象去引用该名称的属性，同名的实例属性会强制屏蔽掉类属性，即引用的是实例属性，除非删除了该实例属性。
+
+
+
+**类方法和实例方法**
+
+类方法需要使用内置装饰器`@classmethod`装饰，使用后，方法的第一个默认参数不再是self，而是cls。意思就是说在方法体内部，可以使用cls来表示当前类，通过cls可以访问类属性和其他类方法，以及静态方法。但是不能访问实例属性和实例方法。
+
+实例方法就是在class结构体中，使用def定义的常规方法，它的第一个默认参数是self，表示的是当前的实例对象，通过self可以访问到所有的实例属性、实例方法、类属性、类方法 以及静态方法。
+
+> 使用`@staticmethod`装饰的方法是静态方法，这样的方法没有默认参数，就是说方法体中不能通过cls或self引用其他属性和方法
+
+
+
+**注意：**
+
+实例方法被其他实例调用时，要特别注意实例方法是从类中获取还是从实例中获取的，如果是从类中获取的，那么实例方法的第一个参数self在调用时是需要赋值的，因为当前类的示例并没有创建。下面举个例子：
+
+```python
+class A:
+    def aa(self, a, b):
+        print(a + b)
+
+
+class B:
+    def __init__(self):
+        self.aa = getattr(A, "aa")  
+
+
+class C:
+    def __init__(self):
+        self.aa = getattr(A(), "aa")
+
+
+b = B()
+c = C()
+
+b.aa(self=object, a=1, b=2)  # 此时的aa实例方法被调用，就要手动给self赋值，否则会报错
+c.aa(a=1, b=2)  # 从实例中获取的实例方法，self默认是已被填充的，调用时则不需要在赋值
 ```
 
 
@@ -643,19 +679,20 @@ execute __ge__
      ​		在上面的示例中，del语句删除了对我们对象的引用（引用计数减 1）。 Python 执行 del语句后，我们的对象不再可以从 Python 代码访问。但是，这些对象仍然存在于内存中。发生这种情况是因为它们仍在相互引用，并且每个对象的引用计数为 1。因为我们前面通过gc.disable()禁用了分代回收，因此循环引用对象无法释放；这时，我们可以通过调用`gc.collect()`手动触发对象回收。
 
      ​		在python中对象分为可变对象和不可变对象。不可变对象包括`int`, `float`, `complex`, `strings`, `bytes`, `tuple`, `range` 和 `frozenset`；可变对象包括`list`, `dict`, `bytearray`和 `set`。循环引用仅存在于container对象（比如，`list`, `dict`, `classes`, `tuple`），python垃圾回收算法主要追踪可变对象及不可变对象`tuple`。如果`tuple`包含的元素都是不可变对象，那么回收算法可以不对该对象进行追踪。
-     
+
 
      **扩展：**
-
+    
      ​		为了决定何时进行一轮垃圾回收，每一代都有一个单独的计数器和阈值。计数器存储自上次收集以来的对象分配数减去释放数的差值。每次分配新的容器对象时，CPython 都会检查第0代的计数器是否超过阈值（通过`gc.get_count()`获得三代对象计数器存储的数值）。如果超过阈值，Python 将触发垃圾回收。我们可以通过`gc.get_threshold()`和`gc.set_threshold()`查看、设置阈值：
+    
      ```python
      import gc
      gc.get_threshold()  # (700, 10, 10) 分别对应三代计数器的阈值
      gc.set_threshold(threshold0=800, threshold0=10, threshold0=10)  # 当threshold0设置为0时，禁用循环GC
      ```
-
+    
      ​		在写程序时，可以通过将调试标志设置为`gc.DEBUG_SAVEALL`，从而将所有unreachable对象添加到`gc.garbage` 中，帮助提升程序质量:
-
+    
      ```python
      import gc
      
@@ -671,12 +708,13 @@ execute __ge__
          print(item)
      ```
 
-     
+
+​     
 
 - **GIL  Global Interpreter Lock(全局解释器锁)**
 
   由于线程之间数据是共享的，也就意味着如果多个线程同时操作某一内存中的数据，就会有严重的数据安全问题。为了解决这个问题就有了GIL，本质上就是一个全局线程互斥锁。
-  
+
   - 在GIL的作用下，单个进程下同一时间只能执行一个线程，即便有多个CPU，多个线程也只会同执行一个。
   - 多线程下，每个线程的执行方式：
     - 获取GIL。
@@ -1207,7 +1245,7 @@ print(d)  # {'a': 1, 'b': 2, 'c': 3}
 
 
 
-### 14、继承和super关键字
+### 14、继承和super
 
 > super 是一个继承自 object 的类，调用super函数（super()）即可获得 super类的实例。
 > 根据官方文档的解释 super() 函数返回的对象` super object`是一个代理对象。
@@ -1217,7 +1255,7 @@ print(d)  # {'a': 1, 'b': 2, 'c': 3}
 **语法格式：**
 
 - super([type[, object-or-type]])
--  Python 3 可以使用直接使用 **super().xxx** 代替 **super(Class, self).xxx** 
+- Python 3 可以使用直接使用 **super().xxx** 代替 **super(Class, self).xxx** 
 
 **函数描述：**
 
@@ -1230,7 +1268,7 @@ print(d)  # {'a': 1, 'b': 2, 'c': 3}
   - 一个类的 MRO 列表就是合并所有父类的 MRO 列表，并遵循以下三条原则：
     - 子类永远在父类前面
     - 如果有多个父类，会根据它们在列表中的顺序被检查
-    - 如果对下一个类存在两个合法的选择，选择第一个父类
+    - 如果对下一个类存在两个合法的选择，选择第一个父类。如果两个父类都有`__init__`初始函数，子类实例化时，只能完成对第一个父类的初始化，第二个父类的初始函数将不会被执行
 
 - **object-or-type：**被代理的对象或类，默认是 self实例自身，可选参数。super()返回值是一个代理对象，就是说 super().func() 调用函数时，其实是以 *<u>被代理的对象或类</u>*  的身份来调用 func 函数。func 函数体 是MRO中解析到对应类中的函数体，因此，我们通过super调用父类方法时，方法内部的 `self/cls` 对象其实就是当前类/当前类实例，使用到的属性也都是当前类的属性。
 
@@ -1376,9 +1414,9 @@ print(d.n)
 
 
 
-### 15、Py的Get和Set方法
+### 15、Get和Set方法
 
-> 相关方法：property、`__getattr__`、`__setattr__`、`__getattribute__`、`setattr`、`getattr`
+> 相关方法：property、`__getattr__`、`__setattr__`、`__getattribute__`、`setattr`、`getattr`、`__getitem__`、`__setitem__`
 
 - **property 作为方法使用**
 
@@ -1523,7 +1561,6 @@ print(d.n)
           18
       '''
       ```
-      
 
 - **`__getattribute__`**
 
@@ -1576,7 +1613,6 @@ print(d.n)
     实例调用属性啦 - __dict__
     None
     ```
-    
 
 - **`getattr`和`setattr`**
 
@@ -1648,16 +1684,66 @@ print(d.n)
   print(a.province)  # sichuan
   print(a.name)  # along
   ```
+
+- **`__getitem__`和`__setitem__`**
+
+  实现了这两个魔法方法的类，其实例可以使用 x[y] 的形式获取和设置实例属性。python内置dict类就是通过这两个魔法方法，使得我们可以便捷的操作字典实例；同样道理，python内置的序列类型（list、tuple...）也是通过实现这两个魔法方法，让我们得以使用索引便捷的操作序列元素。·
+
+  示例：
+
+  ```python
+  class A:
+      def __init__(self):
+          # 实例属性访问权限
+          # 以 单下划线开头 表示受保护的属性（同 java protected），ide不会提示，但可以强制访问
+          # 以 双下划线开头 表示私有属性（同 java private），不允许外部访问
+          # 没有下划线开头的属性，则是 public 性质
+          self.__items = []
   
+      def __getitem__(self, item):
+          # 这里演示一下 for-else 语法
+          # for-else: 如果for过程被break或异常或return，那么将不走else逻辑，否则执行else
+          for k, v in self.__items:
+              if k == item:
+                  return v
+          else:
+              raise KeyError("no such key")
+  
+      def __setitem__(self, key, value):
+          for index, item in enumerate(self.__items):
+              k, v = item
+              # 存在相同key，就更新
+              if k == key:
+                  self.__items[index] = (k, value)
+                  break
+          else:
+              self.__items.append((key, value))
+  
+  
+  if __name__ == '__main__':
+      a = A()
+  
+      a["name"] = "seeker"
+      a["age"] = 18
+  
+      print(a["name"])  # "seeker"
+      print(a["age"])  # 18
+  
+      a["age"] = 22
+  
+      print(a["age"])  # 22
+      print(a["sex"])  # KeyError: 'no such key'
+  ```
+
   
 
 ### 16、弱引用
 
 - **强引用**
   - 普通变量名和对象的关联是强引用的关系，会增加对象的引用计数，进而影响目标对象的生命周期。
--  **弱引用**
+- **弱引用**
   - 弱引用就是在保留引用的前提下，不增加引用计数，也不阻止目标被回收。
-  -  基本的 int 、 list 、 tuple 、string 、dict 实例不能作为弱引用的目标。
+  - 基本的 int 、 list 、 tuple 、string 、dict 实例不能作为弱引用的目标。
   - set 实例可以作为所指对象。
   - str 、 dict 、list 的子类实例 和 用户自定义的类型实例 可以作为弱引用所指对象。
   - int 、 tuple 的子类实例 也不能作为弱引用对象.
@@ -1708,7 +1794,7 @@ print(sys.getrefcount(id(a)))  # 1 弱引用不增加引用计数，所以该对
 
 > 弱引用在缓存应用中很有用，因为不想仅因为被缓存引用着而始终保存缓存对象。
 >
->  `weakref.ref` 实例可以获取所指对象。如果对象存在，调用弱引用可以获取对象；否则返回 `None` 。
+> `weakref.ref` 实例可以获取所指对象。如果对象存在，调用弱引用可以获取对象；否则返回 `None` 。
 >
 > `weakref.ref` 类其实是低层接口，供高级用途使用，多数程序最好使用 **weakref 工具集** 和 `finalize` 。
 >
@@ -2268,7 +2354,7 @@ print(p(4, 5))  # 13
 
 - dir 方法
 
-  -  dir() 是 Python 提供的一个 API 函数，会自动寻找一个对象的所有属性，返回一个列表。从第一节可知，一个实例对象的`__dict__`里只有实例属性，没有包含其他的有效属性。因此如果想获取一个对象所有有效属性，可以使用dir。
+  - dir() 是 Python 提供的一个 API 函数，会自动寻找一个对象的所有属性，返回一个列表。从第一节可知，一个实例对象的`__dict__`里只有实例属性，没有包含其他的有效属性。因此如果想获取一个对象所有有效属性，可以使用dir。
 
     ``` python
     class Apple(object):
@@ -2362,7 +2448,7 @@ print(p(4, 5))  # 13
     print(apple.origin)  # chongqing  实例没有该属性，到所属类（以及父类/兄弟类）中去找，查找顺序就是继承里面讲的MRO
     apple.origin = 'sichuan'  # AttributeError: 'Apple' object has no attribute 'origin'
     ```
-    
+
     
 
 ### 23、元类 和 抽象基类
@@ -2438,7 +2524,7 @@ print(b.__class__)  # 实例b 由类B 创建，按照上面的逻辑，那么 b 
 > 
 > register(cls, subclass)
 >     Register a virtual subclass of an ABC.
->     
+> 
 >     Returns the subclass, to allow usage as a class decorator.
 > ```
 >
@@ -2770,7 +2856,7 @@ Python的内存池机制，可以看作一个金字塔，分为6层（-2 ～ 3�
 
             
 
-### 28、Python -m
+### 28、-m 参数
 
 > -m: run library module as a script（将模块当作脚本运行）
 
@@ -2870,9 +2956,6 @@ if __name__ == '__main__':
 
 > pip install 时，更改到国内镜像仓库，速度更快
 >
-> pip3 install gevent 
->
-> 
 
 ```python
 # 前两步需要在有网的开发环境下进行
@@ -2888,6 +2971,8 @@ pip3 wheel --wheel-dir packges  -i https://pypi.tuna.tsinghua.edu.cn/simple -r r
 #    --no-index 配合 --find-links 使用，--find-links 赋值 .whl 文件所在的文件夹路径
 pip3 install --no-index --find-links=packages -r requirements.txt
 
+# 另外，如果是单个文件的源码包，也可以直接安装
+pip3 install 包名
 ```
 
 
@@ -2929,7 +3014,7 @@ print(a[-2:-5:-2])  # [6, 4]
 
 
 
-### 32、`__init__.py`和`__main__.py`
+### 32、`__init__`、`__main__`
 
 > 1. 如果你希望 python 将一个文件夹作为 Package 对待，那么这个文件夹中必须包含一个名为 `__init__.py` 的文件，即使它是空的。
 > 2. 如果你需要 python 将一个文件夹作为 Package 执行，那么这个文件夹中必须包含一个名为 `__main__.py` 的文件。
@@ -2950,3 +3035,288 @@ print(a[-2:-5:-2])  # [6, 4]
 - `__main__.py`
 
   在命令行直接输入python -m package_name 就可以执行`__main__.py`文件，`__main__.py`让当前文件夹变成一个可执行的模块。
+
+
+
+### 33、运算符
+
+- 算数运算符
+
+  | 运算符 | 说明                                 |
+  | :----- | ------------------------------------ |
+  | +      | 加                                   |
+  | -      | 减                                   |
+  | *      | 乘                                   |
+  | /      | 除法（和数学中的规则一样），保留小数 |
+  | //     | 整除（只保留商的整数部分）           |
+  | %      | 取余，即返回除法的余数               |
+  | **     | 幂运算/次方运算，即返回 x 的 y 次方  |
+
+- 逻辑运算符
+
+  | 运算符 | 含义                               | 基本格式 | 说明                                                         |
+  | ------ | ---------------------------------- | -------- | ------------------------------------------------------------ |
+  | and    | 逻辑与运算<br />等价于数学中的“且” | a and b  | 当 a 和 b 两个表达式都为真时<br />a and b 的结果才为真，否则为假。 |
+  | or     | 逻辑或运算<br />等价于数学中的“或” | a or b   | 当 a 和 b 两个表达式都为假时<br />a or b 的结果才是假，否则为真。 |
+  | not    | 逻辑非运算<br />等价于数学中的“非” | not a    | 如果 a 为真，那么 not a 的结果为假；<br />如果 a 为假，那么 not a 的结果为真。相当于对 a 取反。 |
+
+- 比较运算符
+
+  | 运算符 | 说明                                                         |
+  | ------ | ------------------------------------------------------------ |
+  | >      | 大于，如果`>`前面的值大于后面的值，则返回 True，否则返回 False。 |
+  | <      | 小于，如果前面的值小于后面的值，则返回 True，否则返回 False。 |
+  | ==     | 等于，如果`==`两边的值相等，则返回 True，否则返回 False。    |
+  | >=     | 大于等于（等价于数学中的 ≥）<br />如果`>=`前面的值大于或者等于后面的值，则返回 True，否则返回 False。 |
+  | <=     | 小于等于（等价于数学中的 ≤）<br />如果前面的值小于或者等于后面的值，则返回 True，否则返回 False。 |
+  | !=     | 不等于（等价于数学中的 ≠），如果`!=`两边的值不相等，则返回 True，否则返回 False。 |
+
+- 位运算符
+
+  | 位运算符 | 说明     | 使用形式                                            |
+  | -------- | -------- | --------------------------------------------------- |
+  | &        | 按位与   | a & b                                               |
+  | \|       | 按位或   | a \| b                                              |
+  | ^        | 按位异或 | a ^ b                                               |
+  | ~        | 按位取反 | ~a                                                  |
+  | <<       | 按位左移 | a << b, b表示移动的位数，结果等于 a * 2 ** b        |
+  | >>       | 按位右移 | a &gt;&gt; b, b表示移动的位数，结果等于 a // 2 ** b |
+
+- 赋值运算符
+
+  | 运算符 | 说 明            | 用法举例 | 等价形式    |
+  | ------ | ---------------- | -------- | ----------- |
+  | =      | 最基本的赋值运算 | x = y    | x = y       |
+  | +=     | 加等赋值         | x += y   | x = x + y   |
+  | -=     | 减等赋值         | x -= y   | x = x - y   |
+  | *=     | 乘等赋值         | x *= y   | x = x * y   |
+  | /=     | 除等赋值         | x /= y   | x = x / y   |
+  | //=    | 整除等赋值       | x //= y  | x = x // y  |
+  | %=     | 模等赋值         | x %= y   | x = x % y   |
+  | **=    | 幂等赋值         | x **= y  | x = x ** y  |
+  | &=     | 与等赋值         | x &= y   | x = x & y   |
+  | \|=    | 或等赋值         | x \|= y  | x =  x \| y |
+  | ^=     | 异或等赋值       | x ^= y   | x = x ^ y   |
+
+  最后三个赋值运算符，除了对数值类型进行操作外，还可以对集合类型进行操作，因为集合类型是可以进行部分位运算的。下面举几个简单的例子。
+
+  ```python
+  a = {"jack", "leo", 18}
+  b = {20, "leo", "jack"}
+  
+  # a &= b
+  # print(a)  # {'jack', 'leo'}
+  #
+  # a |= b
+  # print(a)  # {18, 'jack', 20, 'leo'}
+  
+  a ^= b
+  print(a)  # {18, 20}
+  ```
+
+
+
+### 34、文件后缀
+
+在python中，有诸多不同后缀结尾的文件，他们分别有着不同的含义。
+
+- **.py**
+
+  最常见的Python代码文件后缀名，官方称Python源代码文件。
+
+- **.ipynb**
+
+  这个还是比较常见的，.ipynb是Jupyter Notebook文件的扩展名，它代表"IPython Notebook"。
+
+- **.pyi**
+
+  .pyi文件是Python中的类型提示文件，用于提供代码的静态类型信息，一般用于帮助开发人员进行类型检查和静态分析。
+
+  > .pyi文件的命名约定通常与相应的.py文件相同，以便它们可以被自动关联在一起。
+
+- **.pyc**
+
+  .pyc是Python字节码文件的扩展名，用于存储已编译的Python源代码的中间表示形式，因为是二进制文件，所以我们无法正常阅读里面的代码。
+
+  <img src='./images/python_001.png' style='width: 70%;float: left'>
+
+  > .pyc文件包含了已编译的字节码，它可以更快地被Python解释器加载和执行，因为解释器无需再次编译源代码。
+
+- **.pyd**
+
+  .pyd是Python扩展模块的扩展名，用于表示使用C或C++编写的二进制Python扩展模块文件。
+
+  .pyd文件是编译后的二进制文件，它包含了编译后的扩展模块代码以及与Python解释器交互所需的信息。
+
+  此外，.pyd文件通过import语句在Python中导入和使用，就像导入普通的Python模块一样。
+
+  > 由于C或C++的执行速度通常比纯Python代码快，可以使用扩展模块来优化Python代码的性能，尤其是对于计算密集型任务。
+
+- **.pyw**
+
+  .pyw是Python窗口化脚本文件的扩展名。
+
+  它表示一种特殊类型的Python脚本文件，用于创建没有命令行界面（即控制台窗口）的窗口化应用程序。
+
+  > 一般情况下，运行Python脚本会打开一个命令行窗口，其中显示脚本输出和接受用户输入。但是，对于某些应用程序，如图形用户界面（GUI）应用程序，不需要命令行界面，而是希望在窗口中显示交互界面。这时就可以使用.pyw文件。
+
+- **.pyx**
+
+  .pyx是Cython源代码文件的扩展名。
+
+  Cython是一种编译型的静态类型扩展语言，它允许在Python代码中使用C语言的语法和特性，以提高性能并与C语言库进行交互。
+
+  > .pyx文件需要使用cythonize命令进行编译
+
+
+
+
+
+### 35、打包
+
+在Python中，可以使用`setuptools`来创建软件包。
+
+以下是创建Python软件包的基本步骤：
+
+1. 创建项目结构：通常会有一个包含`__init__.py`文件的顶层包，以及其他支持的模块和子包。
+
+2. 创建LICENSE：用来说明你的这个项目可以被怎么使用，是不是需要声明来源，是不是可以商用等，通常我们可以根据自己需要在开源网站上复制一个license：https://opensource.org/licenses
+
+3. 编写代码：在这些模块中编写你的功能，可以使多个目录及文件，也就是本工程的具体实现。
+
+4. 创建`setup.py`：这个脚本用于定义软件包的元数据和项目信息，以及指定哪些文件应该包含在软件包中。
+
+   ```python
+   # setup.py
+   from setuptools import setup, find_packages
+    
+   setup(
+       name='mypackage',
+       version='0.1',
+       description='An example Python package',
+       packages=find_packages(),  # 查找所有的Python内容（包、模块、依赖等）
+       python_requires='>=3.6',
+     	entry_points={  # 调用接口，后面介绍
+         	# key 是分组（group）, val 是一个列表，列表的每一项都是给一个导报路径取个名字
+         	#     通过 databases，就可以在 mypackage组里，拿到 main 函数，并可以直接调用 
+          'mypackage':['databases=mypackage.api.v1.databases:main', ],   
+   )	
+   ```
+
+5. 构建软件包：使用`setuptools`提供的函数来构建软件包。
+
+   ```shell
+   # 这将创建一个源代码归档文件（sdist）和一个wheel包（bdist_wheel），它们可以用于分发。
+   # 生成的文件将放到 dist 目录中
+   python3 setup.py sdist bdist_wheel
+   ```
+
+6. 分发软件包：可以将构建的软件包分发到PyPI或其他源。
+
+   ```python
+   # 安装twine
+   pip install twine
+   
+   # 发布
+   # 注意：发布的时候是需要PYPI的账号的，没有的话需要先注册
+   twine upload dist/*
+   ```
+
+   
+
+**entry_points**
+
+setuptools允许我们在打包时，允许注册一个方便外部调用的接口，实现方式就是在 setup 中注册 entry_points。
+
+如何调用这些注册的借口呢，python也提供了诸多方式，通常使用 `pkg_resources` 模块提供的方方法来获取。
+
+> 在下方示例中，会使用一个名为 console_scripts 的group，这是python支持的特殊group，将entry注册到该group的函数，模块被安装时，python会将这个接口以 entry同名的形式安装到PATH中，这也是为什么我么可以直接在命令行运行某些库的原因，其作用等价于`python -m module_name`。
+
+```python
+"""
+获取目标库注册的所有group
+"""
+entry_map = get_entry_map("pytest")
+#  {'console_scripts': {'py.test': EntryPoint.parse('py.test = pytest:console_main'),
+#                       'pytest': EntryPoint.parse('pytest = pytest:console_main')}}
+print(entry_map)
+
+"""
+获取目标库某个group中某个具体的entry
+"""
+entry_info = get_entry_info("pytest", "console_scripts", "py.test")
+print(entry_info)  # pytest:console_main
+
+"""
+遍历某个group中的所有entry信息
+注意：不同的库可以注册相同的group，下方将打印所有注册了group为console_scripts的entry信息
+"""
+for entry in iter_entry_points("console_scripts"):
+    print(entry)
+
+"""
+导入某个具体的entry
+下方导入的是pytest的测试入口程序，调用则直接运行测试
+"""
+entry = load_entry_point("pytest", "console_scripts", "py.test")()
+```
+
+
+
+**scripts**
+
+该参数作用和entry_points类似，前面示例中没有体现。
+
+scripts 参数是一个 list，安装包时在该参数中列出的文件会被安装到系统 PATH 路径下。
+
+```python
+from setuptools import setup, find_packages
+ 
+setup(
+    name='mypackage',
+    version='0.1',
+    description='An example Python package',
+    packages=find_packages(),  
+    python_requires='>=3.6',
+  	scripts: ['bin/foo.sh', 'bar.py']  # 直接写可执行文件
+)	
+```
+
+用如下方法可以将脚本重命名，例如去掉脚本文件的扩展名(.py、.sh):
+
+```python
+from setuptools import setup, find_packages
+from setuptools.command.install_scripts import install_scripts
+
+class InstallScripts(install_scripts):
+  	# 重写run，删除文件后缀
+    def run(self):
+        setuptools.command.install_scripts.install_scripts.run(self)
+        # Rename some script files
+        for script in self.get_outputs():
+            if basename.endswith(".py") or basename.endswith(".sh"):
+                dest = script[:-3]
+            else:
+                continue
+            print("moving %s to %s" % (script, dest))
+            shutil.move(script, dest)
+            
+setup(
+    name='mypackage',
+    version='0.1',
+    description='An example Python package',
+    packages=find_packages(),  
+    python_requires='>=3.6',
+  	scripts: ['bin/foo.sh', 'bar.py'],  # 直接写可执行文件
+  	cmdclass={  # 使用自定义的安装类
+        "install_scripts": InstallScripts
+    }
+)	
+```
+
+
+
+
+
+
+
